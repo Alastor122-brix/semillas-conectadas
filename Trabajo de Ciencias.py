@@ -122,7 +122,6 @@ def inicio():
         </header>
         <div class="container">
             
-            <!-- Resumen Estadístico Transparente -->
             <div class="resumen-estadistica">
                 <div class="resumen-titulo">📊 Resumen Transparente del Sistema de Reseñas</div>
                 <div style="font-weight: bold; margin-bottom: 8px;">Distribución de Opiniones Registradas:</div>
@@ -146,7 +145,6 @@ def inicio():
                 {% endfor %}
             </div>
 
-            <!-- Feed Infinito de Comentarios -->
             <div class="resenas-seccion">
                 <h3 style="color: #2e7d32; margin-top:0; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">💬 Opiniones de Agricultores y Compradores (Scroll Infinito)</h3>
                 <div id="resenas-lista"></div>
