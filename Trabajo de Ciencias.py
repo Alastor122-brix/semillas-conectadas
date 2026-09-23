@@ -7,6 +7,15 @@ app = Flask(__name__)
 REGIONES = ["Cusco", "Puno", "Junín", "Huánuco", "Ica", "Arequipa", "Cajamarca", "La Libertad", "San Martín", "Ayacucho"]
 TIPOS_SEMILLA = ["Nativa Orgánica", "Criolla Tradicional", "Seleccionada de Granja", "Mejorada Local"]
 
+# Nombres de especialistas agrícolas asignados a cada categoría
+ESPECIALISTAS = {
+    "Maíz": ["Mateo Quispe", "Lucía Huamán", "Efraín Gonzales"],
+    "Papas Nativas": ["Rosa Condori", "Don Pedro Vilca", "Juana Flores"],
+    "Granos Andinos": ["Juan Carlos Mamani", "Yolanda Choque", "Tomás Castillo"],
+    "Legumbres": ["Carlos Benites", "Elena Rojas", "Hernán Silva"],
+    "Café y Cacao": ["Nélida Arango", "Gerson Campos", "Beatriz Mendoza"]
+}
+
 CATEGORIAS_INFO = {
     "Maíz": {"emoji": "🌽", "nombres": ["Blanco Gigante", "Amarillo Duro", "Morado", "Chulpi", "Chala", "Cabanza", "Confite", "Kculli", "Paro", "Sacsa"]},
     "Papas Nativas": {"emoji": "🥔", "nombres": ["Huayro", "Canchán", "Amarilla Tumbay", "Peruanita", "Camotillo", "Tumbay", "Huamantanga", "Yana Shungo", "Puka Shungo", "Sirenita"]},
@@ -37,7 +46,6 @@ for cat, info in CATEGORIAS_INFO.items():
         })
     CATEGORIAS[cat] = lista_productos
 
-# Comentarios estructurados por cada estrellas para asegurar representatividad realista
 COMENARIOS_POR_ESTRELLA = {
     "⭐⭐⭐⭐⭐": [
         "Excelente calidad germinativa, rindió muy bien en la cosecha.",
@@ -97,7 +105,6 @@ def inicio():
             .btn-ver { display: inline-block; background: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; }
             .btn-ver:hover { background: #1b5e20; }
             
-            /* Resumen Transparente de Reseñas */
             .resumen-estadistica { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
             .resumen-titulo { font-weight: bold; font-size: 1.15em; color: #1b5e20; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
             .stat-line { margin: 6px 0; font-size: 0.95em; }
@@ -107,7 +114,6 @@ def inicio():
             .stat-malo { color: #e65100; font-weight: bold; }
             .stat-pesimo { color: #d32f2f; font-weight: bold; }
 
-            /* Feed Infinito de Reseñas */
             .resenas-seccion { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
             .resena-item { padding: 15px; border-bottom: 1px solid #eee; }
             .resena-item:last-child { border-bottom: none; }
@@ -156,7 +162,6 @@ def inicio():
             const autoresEjemplo = {{ autores | tojson }};
             const contenedorResenas = document.getElementById('resenas-lista');
 
-            // Secuencia cíclica garantizada para incluir siempre 5, 4, 3, 2 y 1 estrellas
             const secuenciaEstrellas = ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐", "⭐⭐", "⭐"];
             let indiceSecuencia = 0;
 
@@ -176,10 +181,8 @@ def inicio():
                 }
             }
 
-            // Cargar primeros 5 comentarios (incluirá exactamente 1 de cada calificación desde el inicio)
             agregarResenas(5);
 
-            // Listener para Infinite Scroll
             window.addEventListener('scroll', () => {
                 if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
                     agregarResenas(5);
@@ -198,6 +201,7 @@ def ver_categoria(nombre_cat):
         
     categoria_productos = CATEGORIAS[nombre_cat]
     emoji_cat = CATEGORIAS_INFO[nombre_cat]["emoji"]
+    especialistas_cat = ESPECIALISTAS.get(nombre_cat, ["Asesor Agrícola"])
     
     plantilla_html = """
     <!DOCTYPE html>
@@ -258,7 +262,7 @@ def ver_categoria(nombre_cat):
                         <td>{{ p.tipo }}</td>
                         <td>S/ {{ "%.2f"|format(p.precio) }}</td>
                         <td><span style="color: {{ 'green' if p.disponibilidad == 'Disponible' else 'orange' }}; font-weight: bold;">{{ p.disponibilidad }}</span></td>
-                        <td><button class="btn-chat" onclick="abrirChat('{{ p.nombre }}', {{ p.precio }})">💬 Consultar</button></td>
+                        <td><button class="btn-chat" onclick="abrirChat('{{ p.nombre }}', {{ p.precio }}, {{ loop.index0 }})">💬 Consultar</button></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -280,15 +284,20 @@ def ver_categoria(nombre_cat):
         </div>
 
         <script>
+            const listaEspecialistas = {{ especialistas | tojson }};
             let productoActual = '';
             let precioActual = 0;
 
-            function abrirChat(nombre, precio) {
+            function abrirChat(nombre, precio, index) {
                 productoActual = nombre;
                 precioActual = precio;
-                document.getElementById('tituloProducto').innerText = nombre;
+                
+                // Selección dinámica de especialista según el producto seleccionado
+                const especialista = listaEspecialistas[index % listaEspecialistas.length];
+                
+                document.getElementById('tituloProducto').innerText = especialista + ' - Especialista Agrícola';
                 const msgs = document.getElementById('chatMsgs');
-                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Soy el asistente virtual para <strong>${nombre}</strong>.<br>El precio por Kg es <strong>S/ ${precio.toFixed(2)}</strong>.<br>¿Cuántos kilos necesitas o a qué ciudad deseas el envío?</div>`;
+                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Mi nombre es <strong>${especialista}</strong>, encargado de asesoría técnica para <strong>${nombre}</strong>.<br>El precio por Kg es <strong>S/ ${precio.toFixed(2)}</strong>.<br>¿Cuántos kilos necesitas o a qué ciudad deseas el envío?</div>`;
                 document.getElementById('modalChat').style.display = 'flex';
             }
 
@@ -326,7 +335,7 @@ def ver_categoria(nombre_cat):
     </body>
     </html>
     """
-    return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat)
+    return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
