@@ -1,284 +1,283 @@
-from flask import Flask, render_template_string, jsonify, request
-import random, re
+import random
+from flask import Flask, jsonify, request, render_template_string
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------
-# 1. BASE DE DATOS DE SEMILLAS (100 VARIADADES POR CULTIVO)
-# ---------------------------------------------------------
-REGIONES = ["Cusco", "Huánuco", "Puno", "Junín", "Ayacucho", "Arequipa", "Huancavelica", "Cajamarca", "Ancash", "La Libertad", "Ica"]
-TIPOS = ["Nativa / Orgánica", "Criolla Tradicional", "Nativa Ancestral", "Seleccionada Local"]
+# Base de nombres y regiones para variedades reales
+REGIONES = ["Cusco", "Puno", "Junín", "Huánuco", "Ica", "Arequipa", "Cajamarca", "La Libertad", "San Martín", "Ayacucho"]
+TIPOS_SEMILLA = ["Nativa Orgánica", "Criolla Tradicional", "Seleccionada de Granja", "Mejorada Local"]
 
-CATALOGO_COMPLETO = {
-    "maiz": {"titulo": "🌽 Semillas de Maíz y Cereales", "descripcion": "Catálogo completo de maíces nativos.", "variedades": []},
-    "papa": {"titulo": "🥔 Semillas de Papa y Tubérculos", "descripcion": "Catálogo completo de papas nativas.", "variedades": []},
-    "granos": {"titulo": "🌾 Granos y Cereales Andinos", "descripcion": "Catálogo completo de quinuas y cereales.", "variedades": []},
-    "legumbres": {"titulo": "🫘 Legumbres y Menestras", "descripcion": "Catálogo completo de pallares y frijoles.", "variedades": []},
-    "hortalizas": {"titulo": "🍅 Hortalizas y Ajíes", "descripcion": "Catálogo completo de ajíes y verduras.", "variedades": []}
+CATEGORIAS_INFO = {
+    "Maíz": {"emoji": "🌽", "nombres": ["Blanco Gigante", "Amarillo Duro", "Morado", "Chulpi", "Chala", "Cabanza", "Confite", "Kculli", "Paro", "Sacsa"]},
+    "Papas Nativas": {"emoji": "🥔", "nombres": ["Huayro", "Canchán", "Amarilla Tumbay", "Peruanita", "Camotillo", "Tumbay", "Huamantanga", "Yana Shungo", "Puka Shungo", "Sirenita"]},
+    "Granos Andinos": {"emoji": "🌾", "nombres": ["Quinua Blanca Junín", "Quinua Roja Pasankalla", "Quinua Negra Collana", "Kiwicha Oscar Blanco", "Cañihua Cupi", "Tarwi Zapatos", "Quinua Amarilla Sacaca", "Kiwicha Centenario", "Quinua Choclito", "Cañihua Ramis"]},
+    "Legumbres": {"emoji": "🫘", "nombres": ["Frijol Canario", "Frijol Panamito", "Haba Amarilla", "Pallar de Ica", "Lenteja Criolla", "Arveja Verde", "Frijol Castropampa", "Frijol Caballero", "Haba Gigante", "Garbanzo Blanco"]},
+    "Café y Cacao": {"emoji": "☕", "nombres": ["Café Caturra", "Café Typica", "Café Bourbon", "Café Geisha", "Cacao Chuncho", "Cacao Blanco de Piura", "Cacao CCN-51", "Café Catimor", "Café Pache", "Cacao Criollo de Satipo"]}
 }
 
-for cat_id in CATALOGO_COMPLETO:
+CATEGORIAS = {}
+for cat, info in CATEGORIAS_INFO.items():
+    lista_productos = []
+    nombres_base = info["nombres"]
     for i in range(1, 101):
-        region = random.choice(REGIONES)
-        precio_val = round(random.uniform(7.5, 22.0), 2)
-        CATALOGO_COMPLETO[cat_id]["variedades"].append({
+        nombre_base = nombres_base[(i - 1) % len(nombres_base)]
+        region = REGIONES[(i - 1) % len(REGIONES)]
+        tipo = TIPOS_SEMILLA[(i - 1) % len(TIPOS_SEMILLA)]
+        
+        variedad_nombre = f"{nombre_base} {tipo.split()[0]} - Lote {i}" if i > 10 else f"{nombre_base} de {region}"
+        precio = round(8.0 + (i * 0.25) % 18, 2)
+        
+        lista_productos.append({
             "id": i,
-            "nombre": f"Variedad #{i} de {region}",
-            "origen": region,
-            "tipo": random.choice(TIPOS),
-            "precio_num": precio_val,
-            "precio": f"S/ {precio_val:.2f}"
+            "nombre": variedad_nombre,
+            "region": region,
+            "tipo": tipo,
+            "precio": precio,
+            "disponibilidad": "Disponible" if i % 7 != 0 else "Pocas Unidades"
         })
+    CATEGORIAS[cat] = lista_productos
 
-# ---------------------------------------------------------
-# 2. SISTEMA DE RESEÑAS DESORDENADAS + INFINITE SCROLL
-# ---------------------------------------------------------
-NOMBRES = ["Carlos M.", "Lucía R.", "Jorge T.", "Elena P.", "Martín S.", "Rosa V.", "Diego L.", "Carmen F.", "Raúl K.", "Ana P.", "Mateo G.", "Sofia B."]
-AGRICULTORES = ["Don Pedro Mamani (Cusco)", "Doña María Quispe (Huánuco)", "Cooperativa Urubamba", "Asociación Valle Sur", "Comunidad Mantaro"]
-PLANTILLAS_COMEN = {
-    5: ["¡Excelente calidad de semilla! Germinación sobre el 95%.", "Trato directo impecable, sin intermediarios.", "Llegó a tiempo y el producto superó mis expectativas."],
-    4: ["Muy buena semilla. El envío se retrasó un día pero todo bien.", "Buena tasa de germinación y atención amable.", "Excelente relación calidad-precio."],
-    3: ["El producto es aceptable, aunque el empaque puede mejorar.", "La semilla germinó bien pero faltó mejor comunicación.", "Cumple con lo básico para el cultivo."],
-    2: ["Tuve problemas de germinación en parte del lote.", "El transporte maltrató los sacos durante el viaje.", "Demoró casi una semana en llegar a mi provincia."],
-    1: ["El paquete llegó roto por la agencia de envíos.", "Muy baja respuesta del vendedor ante mis dudas.", "No recibí la variedad exacta que solicité."]
+# Comentarios estructurados por cada estrellas para asegurar representatividad realista
+COMENARIOS_POR_ESTRELLA = {
+    "⭐⭐⭐⭐⭐": [
+        "Excelente calidad germinativa, rindió muy bien en la cosecha.",
+        "Semilla 100% nativa de gran resistencia a las plagas.",
+        "El envío llegó a tiempo y la atención del agricultor fue impecable.",
+        "Muy contento con el rendimiento por hectárea, totalmente recomendado."
+    ],
+    "⭐⭐⭐⭐": [
+        "Buena calidad de semilla, germinó la gran mayoría sin problema.",
+        "Llegó un día después de lo previsto, pero el producto es de primera.",
+        "Muy buen grano y bien empaquetado. Buen servicio general."
+    ],
+    "⭐⭐⭐": [
+        "El producto es bueno pero la agencia de transporte demoró en coordinar.",
+        "Germinación regular, algunas semillas tardaron por el clima seco.",
+        "Atención aceptable, aunque tardaron un poco en responder mis dudas."
+    ],
+    "⭐⭐": [
+        "Hubo demoras con el flete hacia mi localidad y el empaque llegó algo maltratado.",
+        "No rindió lo esperado en mi zona, requiere mejor análisis de suelo."
+    ],
+    "⭐": [
+        "El envío tardó más de 5 días en llegar a mi provincia por mala logística local.",
+        "Tuve inconvenientes con el punto de entrega en la agencia de transporte."
+    ]
 }
 
-def generar_lote_resenas():
-    resenas = []
-    distribucion = [5]*40 + [4]*30 + [3]*15 + [2]*10 + [1]*5
-    for i, estrellas in enumerate(distribucion, 1):
-        resenas.append({
-            "usuario": random.choice(NOMBRES),
-            "agricultor": random.choice(AGRICULTORES),
-            "estrellas": estrellas,
-            "estrellas_texto": "⭐" * estrellas + "☆" * (5 - estrellas),
-            "comentario": random.choice(PLANTILLAS_COMEN[estrellas])
-        })
-    random.shuffle(resenas)
-    return resenas
+NOMBRES_AUTORES = [
+    "Mateo Quispe (Agricultor de Cusco)", "María Condori (Compradora de Lima)",
+    "Juan Carlos Mamani (Productor de Junín)", "Lucía Huamán (Cajamarca)",
+    "Asociación AgroEcológica Valle Sagrado", "Cooperativa Agrícola Puno",
+    "Don Pedro Vilca (Arequipa)", "Comunidad Campesina Huánuco",
+    "Carlos Benites (La Libertad)", "Elena Rojas (San Martín)"
+]
 
-BASE_RESENAS = generar_lote_resenas()
-
-@app.route("/api/resenas")
-def api_resenas():
-    nuevas = generar_lote_resenas()
-    return jsonify(nuevas[:15])
-
-# ---------------------------------------------------------
-# 3. MOTOR DE CHAT INTELIGENTE (RESPUESTAS NATURALES)
-# ---------------------------------------------------------
-@app.route("/api/chat", methods=["POST"])
-def procesar_chat():
-    data = request.get_json() or {}
-    mensaje = data.get("mensaje", "").lower().strip()
-    precio_unitario = float(data.get("precio_unitario", 12.00))
-    producto = data.get("producto", "Semilla")
-
-    numeros = re.findall(r'\d+', mensaje)
-    kilos = float(numeros[0]) if numeros else None
-
-    if kilos:
-        total = kilos * precio_unitario
-        respuesta = f"🌱 El costo total para <b>{int(kilos)} kg</b> de <b>{producto}</b> es de <b>S/ {total:.2f}</b>."
-    elif "buenos dias" in mensaje or "buenos días" in mensaje:
-        respuesta = f"☀️ ¡Buenos días! ¿Cuántos kilos de <b>{producto}</b> te gustaría cotizar?"
-    elif "buenas tardes" in mensaje:
-        respuesta = f"⛅ ¡Buenas tardes! Indícame la cantidad en kilos que necesitas de <b>{producto}</b> y con gusto te calculo el monto."
-    elif "buenas noches" in mensaje:
-        respuesta = f"🌙 ¡Buenas noches! Dime cuántos kilos deseas de <b>{producto}</b> para darte el precio exacto."
-    elif "hola" in mensaje or "buenas" in mensaje:
-        respuesta = f"👋 ¡Hola! ¿En qué puedo ayudarte con respecto a <b>{producto}</b>?"
-    elif "envio" in mensaje or "envío" in mensaje or "provincia" in mensaje or "llegar" in mensaje:
-        respuesta = "🚛 Realizamos envíos directos a todas las regiones del Perú a través de agencias de transporte."
-    else:
-        respuesta = f"Escribe la cantidad de kilos que deseas para <b>{producto}</b> y te daré la cotización al instante."
-
-    return jsonify({"respuesta": respuesta})
-
-# ---------------------------------------------------------
-# 4. RUTAS PRINCIPALES Y PLANTILLAS
-# ---------------------------------------------------------
-@app.route("/")
+@app.route('/')
 def inicio():
-    plantilla = """
+    plantilla_inicio = """
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Semillas Conectadas - Inicio</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Semillas Conectadas - Comercio Justo Directo</title>
         <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-            header { background-color: #1b5e20; color: white; padding: 20px; text-align: center; border-radius: 8px; }
-            h1 { margin: 0; font-size: 19px; }
-            .subtitulo { color: #a5d6a7; font-size: 13px; margin-top: 5px; }
-            .seccion { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-            .grid-categoria { display: flex; gap: 15px; justify-content: center; margin-top: 15px; flex-wrap: wrap; }
-            .tarjeta-cat { background: white; border: 2px solid #a5d6a7; border-radius: 12px; padding: 15px; width: 170px; text-align: center; }
-            .icono-semilla { font-size: 35px; margin: 5px 0; }
-            .btn { display: inline-block; background-color: #2e7d32; color: white; padding: 8px 12px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; font-size: 12px; }
-            .resumen-box { background: #e8f5e9; padding: 15px; border-radius: 6px; border-left: 5px solid #2e7d32; }
-            .grid-resenas { max-height: 350px; overflow-y: scroll; padding-right: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; }
-            .review-card { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
-            .badge-5 { color: #2e7d32; font-weight: bold; }
-            .badge-3 { color: #f57c00; font-weight: bold; }
-            .badge-1 { color: #d32f2f; font-weight: bold; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; }
+            header { background: #2e7d32; color: white; padding: 25px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            h1 { margin: 0; font-size: 2.2em; }
+            p.subtitulo { margin-top: 5px; font-size: 1.1em; opacity: 0.9; }
+            .container { max-width: 1050px; margin: 30px auto; padding: 0 20px; }
+
+            .grid-categorias { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+            .card-categoria { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; border-top: 5px solid #2e7d32; }
+            .card-categoria:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+            .card-categoria .emoji { font-size: 2.8em; margin-bottom: 10px; }
+            .card-categoria h3 { color: #2e7d32; margin: 5px 0 10px 0; font-size: 1.4em; }
+            .btn-ver { display: inline-block; background: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+            .btn-ver:hover { background: #1b5e20; }
+            
+            /* Resumen Transparente de Reseñas */
+            .resumen-estadistica { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+            .resumen-titulo { font-weight: bold; font-size: 1.15em; color: #1b5e20; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+            .stat-line { margin: 6px 0; font-size: 0.95em; }
+            .stat-excelente { color: #2e7d32; font-weight: bold; }
+            .stat-bueno { color: #388e3c; font-weight: bold; }
+            .stat-regular { color: #f57c00; font-weight: bold; }
+            .stat-malo { color: #e65100; font-weight: bold; }
+            .stat-pesimo { color: #d32f2f; font-weight: bold; }
+
+            /* Feed Infinito de Reseñas */
+            .resenas-seccion { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .resena-item { padding: 15px; border-bottom: 1px solid #eee; }
+            .resena-item:last-child { border-bottom: none; }
+            .resena-autor { font-weight: bold; color: #2e7d32; }
+            .resena-texto { margin: 5px 0 0 0; color: #555; }
         </style>
     </head>
     <body>
-
         <header>
-            <h1>Diseño de una Página Web para Conectar con Pequeños Agricultores y Reducir la Dependencia a las Grandes Empresas de Semillas</h1>
-            <div class="subtitulo">Plataforma Agrícola Directa — Ciencia y Tecnología | 2do "C"</div>
+            <h1>Plataforma Semillas Conectadas 🌱</h1>
+            <p class="subtitulo">Conectando Pequeños Agricultores Directamente con el Mercado</p>
         </header>
-
-        <!-- BOTONES DE NAVEGACIÓN -->
-        <div class="seccion">
-            <h2 style="text-align: center; color: #1b5e20; margin-top: 0;">🌱 Explorar Catálogo (100 Variedades por Tipo)</h2>
-            <div class="grid-categoria">
-                <div class="tarjeta-cat"><div class="icono-semilla">🌽</div><h3>Maíz</h3><p>100 Variedades</p><a href="/categoria/maiz" class="btn">Ver Semillas</a></div>
-                <div class="tarjeta-cat"><div class="icono-semilla">🥔</div><h3>Papa</h3><p>100 Variedades</p><a href="/categoria/papa" class="btn">Ver Semillas</a></div>
-                <div class="tarjeta-cat"><div class="icono-semilla">🌾</div><h3>Granos</h3><p>100 Variedades</p><a href="/categoria/granos" class="btn">Ver Semillas</a></div>
-                <div class="tarjeta-cat"><div class="icono-semilla">🫘</div><h3>Legumbres</h3><p>100 Variedades</p><a href="/categoria/legumbres" class="btn">Ver Semillas</a></div>
-                <div class="tarjeta-cat"><div class="icono-semilla">🍅</div><h3>Hortalizas</h3><p>100 Variedades</p><a href="/categoria/hortalizas" class="btn">Ver Semillas</a></div>
-            </div>
-        </div>
-
-        <!-- COMENTARIOS EN EL INICIO -->
-        <div class="seccion">
-            <h3>📊 Resumen Transparente del Sistema de Reseñas</h3>
-            <div class="resumen-box">
-                <p><strong>Distribución de Opiniones Registradas:</strong></p>
-                <ul>
-                    <li class="badge-5">⭐⭐⭐⭐⭐ Excelente (5/5): 40%</li>
-                    <li class="badge-5">⭐⭐⭐⭐ Bueno (4/5): 30%</li>
-                    <li class="badge-3">⭐⭐⭐ Regular (3/5): 15%</li>
-                    <li class="badge-3">⭐⭐ Malo (2/5): 10%</li>
-                    <li class="badge-1">⭐ Pésimo (1/5): 5%</li>
-                </ul>
+        <div class="container">
+            
+            <!-- Resumen Estadístico Transparente -->
+            <div class="resumen-estadistica">
+                <div class="resumen-titulo">📊 Resumen Transparente del Sistema de Reseñas</div>
+                <div style="font-weight: bold; margin-bottom: 8px;">Distribución de Opiniones Registradas:</div>
+                <div class="stat-line">• ⭐⭐⭐⭐⭐ <span class="stat-excelente">Excelente (5/5): 40%</span></div>
+                <div class="stat-line">• ⭐⭐⭐⭐ <span class="stat-bueno">Bueno (4/5): 30%</span></div>
+                <div class="stat-line">• ⭐⭐⭐ <span class="stat-regular">Regular (3/5): 15%</span></div>
+                <div class="stat-line">• ⭐⭐ <span class="stat-malo">Malo (2/5): 10%</span></div>
+                <div class="stat-line">• ⭐ <span class="stat-pesimo">Pésimo (1/5): 5%</span></div>
             </div>
 
-            <h3 style="margin-top: 20px;">💬 Comentarios de Compradores (Scroll Infinito)</h3>
-            <div class="grid-resenas" id="contenedorResenas">
-                {% for r in resenas %}
-                <div class="review-card">
-                    <strong>{{ r.usuario }}</strong> a <em>{{ r.agricultor }}</em> — 
-                    <span class="{% if r.estrellas >= 4 %}badge-5{% elif r.estrellas >= 2 %}badge-3{% else %}badge-1{% endif %}">
-                        {{ r.estrellas_texto }} ({{ r.estrellas }}/5)
-                    </span>
-                    <br>{{ r.comentario }}
+            <h2 style="text-align: center; color: #2e7d32; margin-bottom: 25px;">Explorar Catálogo de Semillas por Categoría</h2>
+            
+            <div class="grid-categorias">
+                {% for cat, info in categorias.items() %}
+                <div class="card-categoria">
+                    <div class="emoji">{{ info.emoji }}</div>
+                    <h3>{{ cat }}</h3>
+                    <p style="color:#666;">100 variedades nativas y criollas con certificación de origen.</p>
+                    <a href="/categoria/{{ cat }}" class="btn-ver">{{ info.emoji }} Explorar {{ cat }}</a>
                 </div>
                 {% endfor %}
+            </div>
+
+            <!-- Feed Infinito de Comentarios -->
+            <div class="resenas-seccion">
+                <h3 style="color: #2e7d32; margin-top:0; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">💬 Opiniones de Agricultores y Compradores (Scroll Infinito)</h3>
+                <div id="resenas-lista"></div>
             </div>
         </div>
 
         <script>
-            const contenedor = document.getElementById('contenedorResenas');
-            let cargando = false;
+            const comentariosMap = {{ comentarios_map | tojson }};
+            const autoresEjemplo = {{ autores | tojson }};
+            const contenedorResenas = document.getElementById('resenas-lista');
 
-            contenedor.addEventListener('scroll', () => {
-                if (contenedor.scrollTop + contenedor.clientHeight >= contenedor.scrollHeight - 10 && !cargando) {
-                    cargando = true;
-                    fetch('/api/resenas')
-                        .then(res => res.json())
-                        .then(data => {
-                            data.forEach(r => {
-                                const div = document.createElement('div');
-                                div.className = 'review-card';
-                                const claseEstrellas = r.estrellas >= 4 ? 'badge-5' : (r.estrellas >= 2 ? 'badge-3' : 'badge-1');
-                                div.innerHTML = `<strong>${r.usuario}</strong> a <em>${r.agricultor}</em> — 
-                                    <span class="${claseEstrellas}">${r.estrellas_texto} (${r.estrellas}/5)</span>
-                                    <br>${r.comentario}`;
-                                contenedor.appendChild(div);
-                            });
-                            cargando = false;
-                        });
+            // Secuencia cíclica garantizada para incluir siempre 5, 4, 3, 2 y 1 estrellas
+            const secuenciaEstrellas = ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐", "⭐⭐", "⭐"];
+            let indiceSecuencia = 0;
+
+            function agregarResenas(cantidad) {
+                for (let i = 0; i < cantidad; i++) {
+                    const estrellas = secuenciaEstrellas[indiceSecuencia % secuenciaEstrellas.length];
+                    indiceSecuencia++;
+
+                    const listaTextos = comentariosMap[estrellas];
+                    const texto = listaTextos[Math.floor(Math.random() * listaTextos.length)];
+                    const autor = autoresEjemplo[Math.floor(Math.random() * autoresEjemplo.length)];
+                    
+                    const div = document.createElement('div');
+                    div.className = 'resena-item';
+                    div.innerHTML = `<span class="resena-autor">${estrellas} ${autor}:</span> <p class="resena-texto">"${texto}"</p>`;
+                    contenedorResenas.appendChild(div);
+                }
+            }
+
+            // Cargar primeros 5 comentarios (incluirá exactamente 1 de cada calificación desde el inicio)
+            agregarResenas(5);
+
+            // Listener para Infinite Scroll
+            window.addEventListener('scroll', () => {
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) {
+                    agregarResenas(5);
                 }
             });
         </script>
-
     </body>
     </html>
     """
-    return render_template_string(plantilla, resenas=BASE_RESENAS)
+    return render_template_string(plantilla_inicio, categorias=CATEGORIAS_INFO, comentarios_map=COMENARIOS_POR_ESTRELLA, autores=NOMBRES_AUTORES)
 
-@app.route("/categoria/<nombre_cat>")
+@app.route('/categoria/<nombre_cat>')
 def ver_categoria(nombre_cat):
-    categoria = CATALOGO_COMPLETO.get(nombre_cat)
-    if not categoria:
+    if nombre_cat not in CATEGORIAS:
         return "Categoría no encontrada", 404
-
+        
+    categoria_productos = CATEGORIAS[nombre_cat]
+    emoji_cat = CATEGORIAS_INFO[nombre_cat]["emoji"]
+    
     plantilla_html = """
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>{{ categoria.titulo }}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ emoji }} {{ categoria }} - Semillas Conectadas</title>
         <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
-            h1 { color: #1b5e20; }
-            .btn-volver { display: inline-block; background: #555; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
-            .tabla-contenedor { max-height: 500px; overflow-y: scroll; border: 1px solid #ccc; border-radius: 8px; }
-            table { width: 100%; border-collapse: collapse; background: white; }
-            th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
-            th { background-color: #2e7d32; color: white; position: sticky; top: 0; }
-            .btn-chat { background: #2e7d32; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
-            
-            /* MODAL FLOTANTE DEL CHAT DENTRO DE LAS VARIADADES */
-            #modal-chat { display: none; position: fixed; bottom: 20px; right: 20px; width: 320px; background: white; border: 2px solid #1b5e20; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; overflow: hidden; }
-            #chat-header { background: #1b5e20; color: white; padding: 10px; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; }
-            #chat-mensajes { height: 200px; overflow-y: auto; padding: 10px; font-size: 13px; background: #fafafa; }
-            .msg { margin-bottom: 8px; padding: 6px; border-radius: 6px; }
-            .msg-user { background: #e1f5fe; text-align: right; }
-            .msg-bot { background: #e8f5e9; border-left: 3px solid #2e7d32; }
-            #chat-input-box { display: flex; border-top: 1px solid #ccc; }
-            #chat-input { flex: 1; border: none; padding: 8px; font-size: 12px; }
-            #btn-send { background: #2e7d32; color: white; border: none; padding: 0 12px; cursor: pointer; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+            header { background: #2e7d32; color: white; padding: 15px; text-align: center; }
+            .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+            .btn-volver { display: inline-block; background: #555; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; margin-bottom: 20px; font-weight: bold; }
+            .btn-volver:hover { background: #333; }
+            table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #2e7d32; color: white; }
+            tr:hover { background-color: #f1f8f5; }
+            .btn-chat { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+            .btn-chat:hover { background: #1b5e20; }
+            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+            .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; height: 500px; }
+            .modal-header { background: #2e7d32; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+            .cerrar-modal { cursor: pointer; font-size: 20px; }
+            .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+            .msg { padding: 10px 14px; border-radius: 8px; max-width: 80%; line-height: 1.4; }
+            .msg-bot { background: #e8f5e9; color: #1b5e20; align-self: flex-start; border: 1px solid #c8e6c9; }
+            .msg-user { background: #2e7d32; color: white; align-self: flex-end; }
+            .chat-input { display: flex; border-top: 1px solid #ddd; padding: 10px; background: white; }
+            .chat-input input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
+            .chat-input button { background: #2e7d32; color: white; border: none; padding: 10px 15px; margin-left: 8px; border-radius: 4px; cursor: pointer; }
         </style>
     </head>
     <body>
-        <a href="/" class="btn-volver">← Volver al Inicio</a>
-        <h1>{{ categoria.titulo }}</h1>
-        <p>{{ categoria.descripcion }}</p>
-
-        <div class="tabla-contenedor">
+        <header>
+            <h1>{{ emoji }} Categoría: {{ categoria }} (100 Variedades)</h1>
+        </header>
+        <div class="container">
+            <a href="/" class="btn-volver">← Volver al Inicio</a>
             <table>
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Variedad de Semilla</th>
-                        <th>Origen</th>
-                        <th>Tipo</th>
-                        <th>Precio/Kg</th>
-                        <th>Acción</th>
+                        <th>Nombre / Variedad</th>
+                        <th>Región / Origen</th>
+                        <th>Tipo de Semilla</th>
+                        <th>Precio / Kg</th>
+                        <th>Estado</th>
+                        <th>Consulta</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in categoria.variedades %}
+                    {% for p in productos %}
                     <tr>
-                        <td>{{ item.id }}</td>
-                        <td><strong>{{ item.nombre }}</strong></td>
-                        <td>{{ item.origen }}</td>
-                        <td>{{ item.tipo }}</td>
-                        <td>{{ item.precio }}</td>
-                        <td>
-                            <button class="btn-chat" onclick="abrirChat('{{ item.nombre }}', '{{ item.precio_num }}')">💬 Chatear / Cotizar</button>
-                        </td>
+                        <td>{{ p.id }}</td>
+                        <td><strong>{{ p.nombre }}</strong></td>
+                        <td>📍 {{ p.region }}</td>
+                        <td>{{ p.tipo }}</td>
+                        <td>S/ {{ "%.2f"|format(p.precio) }}</td>
+                        <td><span style="color: {{ 'green' if p.disponibilidad == 'Disponible' else 'orange' }}; font-weight: bold;">{{ p.disponibilidad }}</span></td>
+                        <td><button class="btn-chat" onclick="abrirChat('{{ p.nombre }}', {{ p.precio }})">💬 Consultar</button></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        <!-- MODAL DEL CHAT -->
-        <div id="modal-chat">
-            <div id="chat-header">
-                <span id="chat-titulo-prod">Chat con Vendedor</span>
-                <span style="cursor:pointer;" onclick="cerrarChat()">✖</span>
-            </div>
-            <div id="chat-mensajes"></div>
-            <div id="chat-input-box">
-                <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." onkeypress="if(event.key==='Enter') enviarMsg()">
-                <button id="btn-send" onclick="enviarMsg()">Enviar</button>
+        <div id="modalChat" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span id="tituloProducto">Consulta de Producto</span>
+                    <span class="cerrar-modal" onclick="cerrarChat()">&times;</span>
+                </div>
+                <div id="chatMsgs" class="chat-messages"></div>
+                <div class="chat-input">
+                    <input type="text" id="inputMsg" placeholder="Escribe tu consulta o cantidad (ej. 5 kg)..." onkeypress="if(event.key==='Enter') enviarMensaje()">
+                    <button onclick="enviarMensaje()">Enviar</button>
+                </div>
             </div>
         </div>
 
@@ -288,23 +287,23 @@ def ver_categoria(nombre_cat):
 
             function abrirChat(nombre, precio) {
                 productoActual = nombre;
-                precioActual = parseFloat(precio);
-                document.getElementById('modal-chat').style.display = 'block';
-                document.getElementById('chat-titulo-prod').textContent = nombre;
-                const msgs = document.getElementById('chat-mensajes');
-                msgs.innerHTML = `<div class="msg msg-bot">👋 ¡Hola! Bienvenido. Estás consultando por <b>${nombre}</b>. ¿Cuántos kilos te gustaría cotizar?</div>`;
+                precioActual = precio;
+                document.getElementById('tituloProducto').innerText = nombre;
+                const msgs = document.getElementById('chatMsgs');
+                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Soy el asistente virtual para <strong>${nombre}</strong>.<br>El precio por Kg es <strong>S/ ${precio.toFixed(2)}</strong>.<br>¿Cuántos kilos necesitas o a qué ciudad deseas el envío?</div>`;
+                document.getElementById('modalChat').style.display = 'flex';
             }
 
             function cerrarChat() {
-                document.getElementById('modal-chat').style.display = 'none';
+                document.getElementById('modalChat').style.display = 'none';
             }
 
-            function enviarMsg() {
-                const input = document.getElementById('chat-input');
+            function enviarMensaje() {
+                const input = document.getElementById('inputMsg');
                 const texto = input.value.trim();
                 if (!texto) return;
 
-                const msgs = document.getElementById('chat-mensajes');
+                const msgs = document.getElementById('chatMsgs');
                 const divUser = document.createElement('div');
                 divUser.className = 'msg msg-user';
                 divUser.textContent = texto;
@@ -329,7 +328,36 @@ def ver_categoria(nombre_cat):
     </body>
     </html>
     """
-    return render_template_string(plantilla_html, categoria=categoria)
+    return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat)
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    datos = request.json
+    mensaje = datos.get('mensaje', '').lower()
+    precio = datos.get('precio_unitario', 10.0)
+    producto = datos.get('producto', 'Semilla')
+
+    import re
+    numeros = re.findall(r'\d+', mensaje)
+
+    if numeros:
+        kilos = int(numeros[0])
+        subtotal = kilos * precio
+        envio = 15.0 if kilos < 20 else 0.0
+        total = subtotal + envio
+        
+        texto_envio = "¡Envío gratuito por compras mayores a 20 kg!" if envio == 0 else "Costo de envío estándar: S/ 15.00."
+        
+        respuesta = f"Para <strong>{kilos} kg</strong> de {producto}:<br>" \
+                    f"• Subtotal: S/ {subtotal:.2f}<br>" \
+                    f"• Envío: S/ {envio:.2f} ({texto_envio})<br>" \
+                    f"• <strong>Total estimado: S/ {total:.2f}</strong>"
+    elif "envio" in mensaje or "flete" in mensaje or "ciudad" in mensaje or "llegada" in mensaje:
+        respuesta = f"Realizamos envíos directos desde los campos de cultivo a todas las regiones del Perú (24 a 48 horas). Para {producto}, el envío cuesta S/ 15.00 o es <strong>GRATIS</strong> si pides 20 kg o más."
+    else:
+        respuesta = f"Gracias por tu consulta sobre <strong>{producto}</strong>. Puedes indicarnos la cantidad exacta en kilos (ejemplo: '15 kg') para calcular tu presupuesto con envío directo."
+
+    return jsonify({"respuesta": respuesta})
 
 if __name__ == "__main__":
     app.run(debug=True)
