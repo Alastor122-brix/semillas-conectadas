@@ -1,13 +1,14 @@
 import random
+import re
 from flask import Flask, jsonify, request, render_template_string
 
 app = Flask(__name__)
 
-# Base de nombres y regiones para variedades reales
+# Base de datos de regiones y tipos
 REGIONES = ["Cusco", "Puno", "Junín", "Huánuco", "Ica", "Arequipa", "Cajamarca", "La Libertad", "San Martín", "Ayacucho"]
 TIPOS_SEMILLA = ["Nativa Orgánica", "Criolla Tradicional", "Seleccionada de Granja", "Mejorada Local"]
 
-# Nombres de especialistas agrícolas asignados a cada categoría
+# Especialistas por categoría
 ESPECIALISTAS = {
     "Maíz": ["Mateo Quispe", "Lucía Huamán", "Efraín Gonzales"],
     "Papas Nativas": ["Rosa Condori", "Don Pedro Vilca", "Juana Flores"],
@@ -120,8 +121,7 @@ def inicio():
             .resena-autor { font-weight: bold; color: #2e7d32; }
             .resena-texto { margin: 5px 0 0 0; color: #555; }
 
-            /* Sección de Fuentes Bibliográficas */
-            .fuentes-seccion { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 12px; padding: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+            .fuentes-seccion { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 12px; padding: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.03); margin-bottom: 30px; }
             .fuentes-seccion h4 { color: #1b5e20; margin-top: 0; margin-bottom: 10px; font-size: 1.1em; }
             .fuentes-list { margin: 0; padding-left: 20px; color: #555; font-size: 0.9em; line-height: 1.6; }
         </style>
@@ -161,7 +161,6 @@ def inicio():
                 <div id="resenas-lista"></div>
             </div>
 
-            <!-- Sección de Fuentes de Información -->
             <div class="fuentes-seccion">
                 <h4>📚 Fuentes Bibliográficas y Científicas de Información</h4>
                 <ul class="fuentes-list">
@@ -292,7 +291,7 @@ def ver_categoria(nombre_cat):
                 </div>
                 <div id="chatMsgs" class="chat-messages"></div>
                 <div class="chat-input">
-                    <input type="text" id="inputMsg" placeholder="Escribe tu consulta o cantidad (ej. 5 kg)..." onkeypress="if(event.key==='Enter') enviarMensaje()">
+                    <input type="text" id="inputMsg" placeholder="Escribe tu consulta o cantidad (ej. 15 kg)..." onkeypress="if(event.key==='Enter') enviarMensaje()">
                     <button onclick="enviarMensaje()">Enviar</button>
                 </div>
             </div>
@@ -302,16 +301,16 @@ def ver_categoria(nombre_cat):
             const listaEspecialistas = {{ especialistas | tojson }};
             let productoActual = '';
             let precioActual = 0;
+            let especialistaActual = '';
 
             function abrirChat(nombre, precio, index) {
                 productoActual = nombre;
                 precioActual = precio;
+                especialistaActual = listaEspecialistas[index % listaEspecialistas.length];
                 
-                const especialista = listaEspecialistas[index % listaEspecialistas.length];
-                
-                document.getElementById('tituloProducto').innerText = especialista + ' - Especialista Agrícola';
+                document.getElementById('tituloProducto').innerText = especialistaActual + ' (Asesor IA)';
                 const msgs = document.getElementById('chatMsgs');
-                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Mi nombre es <strong>${especialista}</strong>, encargado de asesoría técnica para <strong>${nombre}</strong>.<br>El precio por Kg es <strong>S/ ${precio.toFixed(2)}</strong>.<br>¿Cuántos kilos necesitas o a qué ciudad deseas el envío?</div>`;
+                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Soy <strong>${especialistaActual}</strong>, especialista en <strong>${nombre}</strong>.<br>El precio base es de <strong>S/ ${precio.toFixed(2)} / kg</strong>.<br>¿En qué puedo ayudarte hoy? Puedes pedirme cotización por kilos, consultar sobre envíos, garantía o calidad.</div>`;
                 document.getElementById('modalChat').style.display = 'flex';
             }
 
@@ -334,7 +333,7 @@ def ver_categoria(nombre_cat):
                 fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mensaje: texto, precio_unitario: precioActual, producto: productoActual })
+                    body: JSON.stringify({ mensaje: texto, precio_unitario: precioActual, producto: productoActual, especialista: especialistaActual })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -351,34 +350,90 @@ def ver_categoria(nombre_cat):
     """
     return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
+# Motor de IA contextualizado con variaciones dinámicas
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     datos = request.json
     mensaje = datos.get('mensaje', '').lower()
     precio = datos.get('precio_unitario', 10.0)
     producto = datos.get('producto', 'Semilla')
+    especialista = datos.get('especialista', 'Asesor')
 
-    import re
     numeros = re.findall(r'\d+', mensaje)
 
+    # 1. Cotización si ingresa kilos o un número
     if numeros:
         kilos = int(numeros[0])
         subtotal = kilos * precio
-        envio = 15.0 if kilos < 20 else 0.0
+        envio = 0.0 if kilos >= 20 else 15.0
         total = subtotal + envio
         
-        texto_envio = "¡Envío gratuito por compras mayores a 20 kg!" if envio == 0 else "Costo de envío estándar: S/ 15.00."
-        
-        respuesta = f"Para <strong>{kilos} kg</strong> de {producto}:<br>" \
-                    f"• Subtotal: S/ {subtotal:.2f}<br>" \
-                    f"• Envío: S/ {envio:.2f} ({texto_envio})<br>" \
-                    f"• <strong>Total estimado: S/ {total:.2f}</strong>"
-    elif "envio" in mensaje or "flete" in mensaje or "ciudad" in mensaje or "llegada" in mensaje:
-        respuesta = f"Realizamos envíos directos desde los campos de cultivo a todas las regiones del Perú (24 a 48 horas). Para {producto}, el envío cuesta S/ 15.00 o es <strong>GRATIS</strong> si pides 20 kg o más."
-    else:
-        respuesta = f"Gracias por tu consulta sobre <strong>{producto}</strong>. Puedes indicarnos la cantidad exacta en kilos (ejemplo: '15 kg') para calcular tu presupuesto con envío directo."
+        respuestas_cotizacion = [
+            f"Perfecto. Para un pedido de <strong>{kilos} kg</strong> de {producto}:<br>"
+            f"• Subtotal: S/ {subtotal:.2f}<br>"
+            f"• Flete/Envío: S/ {envio:.2f} {'(¡Envío gratis por pedir +20 kg!)' if envio == 0 else ''}<br>"
+            f"• <strong>Monto Final: S/ {total:.2f}</strong><br>"
+            f"¿Te gustaría proceder a coordinar el despacho?",
+            
+            f"Excelente elección. Elaborando la cotización para <strong>{kilos} kg</strong>:<br>"
+            f"• Precio por kg: S/ {precio:.2f}<br>"
+            f"• Costo total de semillas: S/ {subtotal:.2f}<br>"
+            f"• Cargo de envío: S/ {envio:.2f}<br>"
+            f"• <strong>Total estimado: S/ {total:.2f}</strong><br>"
+            f"Quedo atento a tus indicaciones para reservar este lote.",
 
-    return jsonify({"respuesta": respuesta})
+            f"Entendido. Un lote de <strong>{kilos} kg</strong> de {producto} suma:<br>"
+            f"• Subtotal: S/ {subtotal:.2f}<br>"
+            f"• Transporte regional: S/ {envio:.2f}<br>"
+            f"• <strong>Total a pagar: S/ {total:.2f}</strong><br>"
+            f"¿A qué provincia o distrito requerirías el envío?"
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_cotizacion)})
+
+    # 2. Consultas sobre envíos o transporte
+    elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "donde"]):
+        respuestas_envio = [
+            f"Realizamos despachos directos desde el campo a cualquier provincia del Perú. El envío demora entre 24 y 48 horas. Cuesta S/ 15.00, pero si pides a partir de 20 kg el flete es <strong>totalmente gratis</strong>.",
+            f"Coordinamos con agencias de transporte a nivel nacional (Shalom, Marvisur, Olva). El tiempo promedio de entrega es de 1 a 2 días hábiles según la región.",
+            f"Hacemos envíos directos a todas las regiones del país. Recuerda que para compras de 20 kg a más el envío no tiene costo adicional."
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_envio)})
+
+    # 3. Saludos
+    elif any(k in mensaje for k in ["hola", "buenas", "que tal", "saludos", "inicio"]):
+        respuestas_saludo = [
+            f"¡Hola! Saludos. Soy {especialista}. ¿En qué te puedo asesorar respecto al cultivo o pedido de {producto}?",
+            f"¡Buenas! Un gusto saludarte. Quedo a tu disposición para brindarte detalles sobre el rendimiento o cotizaciones de {producto}.",
+            f"¡Hola! Qué gusto saludarte. ¿Deseas cotizar alguna cantidad específica o tienes consultas sobre la germinación de este lote?"
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_saludo)})
+
+    # 4. Consultas sobre garantía, germinación o calidad
+    elif any(k in mensaje for k in ["calidad", "garantia", "germinacion", "rendimiento", "bueno", "nativa", "original"]):
+        respuestas_calidad = [
+            f"Nuestras semillas de {producto} tienen una tasa de germinación superior al 88%. Son cosechadas de manera artesanal y libre de transgénicos.",
+            f"Garantizamos un origen 100% nativo y libre de intermediarios. Cada lote cuenta con registro de origen y alto rendimiento por hectárea.",
+            f"Todas las variedades pasan por selección manual. Te garantizamos la máxima frescura y pureza genética en este lote."
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_calidad)})
+
+    # 5. Métodos de pago o descuentos
+    elif any(k in mensaje for k in ["pago", "descuento", "precio", "yape", "tarjeta", "efectivo"]):
+        respuestas_pago = [
+            f"Aceptamos transferencias bancarias, Yape, Plin y pagos contra entrega coordinados con la agencia. Para compras mayores a 50 kg ofrecemos un 5% de descuento adicional.",
+            f"El precio base es de S/ {precio:.2f} por kg. Puedes pagar directamente vía Yape/Plin o transferencia. Si compras por volumen podemos aplicar una tarifa mayorista.",
+            f"Manejamos precios de comercio justo directo. Puedes cancelar por medio de transferencia electrónica o billeteras digitales."
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_pago)})
+
+    # 6. Respuesta general / fallback aleatorio si no reconoce
+    else:
+        respuestas_general = [
+            f"Entiendo tu consulta sobre <strong>{producto}</strong>. Para darte el presupuesto exacto con transporte, ¿cuántos kilos calculas que vas a necesitar?",
+            f"Gracias por escribir. Si tienes dudas sobre el rendimiento de {producto} o deseas calcular el total de tu pedido, indícame la cantidad en kilos.",
+            f"Con gusto te brindo asistencia. ¿Deseas conocer la disponibilidad de stock o cotizar un lote de {producto}?"
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_general)})
 
 if __name__ == "__main__":
     app.run(debug=True)
