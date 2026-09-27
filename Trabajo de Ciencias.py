@@ -114,11 +114,16 @@ def inicio():
             .stat-malo { color: #e65100; font-weight: bold; }
             .stat-pesimo { color: #d32f2f; font-weight: bold; }
 
-            .resenas-seccion { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .resenas-seccion { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 40px; }
             .resena-item { padding: 15px; border-bottom: 1px solid #eee; }
             .resena-item:last-child { border-bottom: none; }
             .resena-autor { font-weight: bold; color: #2e7d32; }
             .resena-texto { margin: 5px 0 0 0; color: #555; }
+
+            /* Sección de Fuentes Bibliográficas */
+            .fuentes-seccion { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 12px; padding: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+            .fuentes-seccion h4 { color: #1b5e20; margin-top: 0; margin-bottom: 10px; font-size: 1.1em; }
+            .fuentes-list { margin: 0; padding-left: 20px; color: #555; font-size: 0.9em; line-height: 1.6; }
         </style>
     </head>
     <body>
@@ -154,6 +159,16 @@ def inicio():
             <div class="resenas-seccion">
                 <h3 style="color: #2e7d32; margin-top:0; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">💬 Opiniones de Agricultores y Compradores (Scroll Infinito)</h3>
                 <div id="resenas-lista"></div>
+            </div>
+
+            <!-- Sección de Fuentes de Información -->
+            <div class="fuentes-seccion">
+                <h4>📚 Fuentes Bibliográficas y Científicas de Información</h4>
+                <ul class="fuentes-list">
+                    <li><strong>Wikipedia (Enciclopedia Libre):</strong> Datos sobre la taxonomía, origen geográfico y características botánicas generales de las especies agrícolas.</li>
+                    <li><strong>INIA (Instituto Nacional de Innovación Agraria del Perú):</strong> Información técnica sobre la adaptabilidad de cultivos nativos y conservación de semillas criollas.</li>
+                    <li><strong>CIP (Centro Internacional de la Papa):</strong> Investigaciones sobre la diversidad genética y la agrobiodiversidad de las papas nativas e insumos andinos.</li>
+                </ul>
             </div>
         </div>
 
@@ -292,7 +307,6 @@ def ver_categoria(nombre_cat):
                 productoActual = nombre;
                 precioActual = precio;
                 
-                // Selección dinámica de especialista según el producto seleccionado
                 const especialista = listaEspecialistas[index % listaEspecialistas.length];
                 
                 document.getElementById('tituloProducto').innerText = especialista + ' - Especialista Agrícola';
