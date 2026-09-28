@@ -93,9 +93,26 @@ def inicio():
         <title>Semillas Conectadas - Comercio Justo Directo</title>
         <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; }
-            header { background: #2e7d32; color: white; padding: 25px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            
+            /* Encabezado Principal */
+            header { background: #2e7d32; color: white; padding: 25px 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
             h1 { margin: 0; font-size: 2.2em; }
             p.subtitulo { margin-top: 5px; font-size: 1.1em; opacity: 0.9; }
+            
+            /* Cuadro de Fuentes Bibliográficas al lado/debajo del Título */
+            .header-fuentes {
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 12px 20px;
+                margin: 15px auto 0 auto;
+                max-width: 800px;
+                text-align: left;
+                font-size: 0.9em;
+            }
+            .header-fuentes h4 { margin: 0 0 5px 0; color: #e8f5e9; font-size: 1em; }
+            .header-fuentes ul { margin: 0; padding-left: 20px; color: #f1f8f5; }
+
             .container { max-width: 1050px; margin: 30px auto; padding: 0 20px; }
 
             .grid-categorias { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
@@ -120,16 +137,22 @@ def inicio():
             .resena-item:last-child { border-bottom: none; }
             .resena-autor { font-weight: bold; color: #2e7d32; }
             .resena-texto { margin: 5px 0 0 0; color: #555; }
-
-            .fuentes-seccion { background: #ffffff; border: 1px solid #c8e6c9; border-radius: 12px; padding: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.03); margin-bottom: 30px; }
-            .fuentes-seccion h4 { color: #1b5e20; margin-top: 0; margin-bottom: 10px; font-size: 1.1em; }
-            .fuentes-list { margin: 0; padding-left: 20px; color: #555; font-size: 0.9em; line-height: 1.6; }
         </style>
     </head>
     <body>
         <header>
             <h1>Plataforma Semillas Conectadas 🌱</h1>
             <p class="subtitulo">Conectando Pequeños Agricultores Directamente con el Mercado</p>
+            
+            <!-- Fuentes Bibliográficas visibles directo en el Título -->
+            <div class="header-fuentes">
+                <h4>📚 Fuentes Bibliográficas y Científicas del Proyecto:</h4>
+                <ul>
+                    <li><strong>Wikipedia:</strong> Taxonomía, origen botánico y caracterización general de especies.</li>
+                    <li><strong>INIA (Instituto Nacional de Innovación Agraria):</strong> Adaptabilidad técnica y conservación de semillas criollas.</li>
+                    <li><strong>CIP (Centro Internacional de la Papa):</strong> Diversidad genética de cultivos nativos andinos.</li>
+                </ul>
+            </div>
         </header>
         <div class="container">
             
@@ -159,15 +182,6 @@ def inicio():
             <div class="resenas-seccion">
                 <h3 style="color: #2e7d32; margin-top:0; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">💬 Opiniones de Agricultores y Compradores (Scroll Infinito)</h3>
                 <div id="resenas-lista"></div>
-            </div>
-
-            <div class="fuentes-seccion">
-                <h4>📚 Fuentes Bibliográficas y Científicas de Información</h4>
-                <ul class="fuentes-list">
-                    <li><strong>Wikipedia (Enciclopedia Libre):</strong> Datos sobre la taxonomía, origen geográfico y características botánicas generales de las especies agrícolas.</li>
-                    <li><strong>INIA (Instituto Nacional de Innovación Agraria del Perú):</strong> Información técnica sobre la adaptabilidad de cultivos nativos y conservación de semillas criollas.</li>
-                    <li><strong>CIP (Centro Internacional de la Papa):</strong> Investigaciones sobre la diversidad genética y la agrobiodiversidad de las papas nativas e insumos andinos.</li>
-                </ul>
             </div>
         </div>
 
@@ -291,7 +305,7 @@ def ver_categoria(nombre_cat):
                 </div>
                 <div id="chatMsgs" class="chat-messages"></div>
                 <div class="chat-input">
-                    <input type="text" id="inputMsg" placeholder="Escribe tu consulta o cantidad (ej. 15 kg)..." onkeypress="if(event.key==='Enter') enviarMensaje()">
+                    <input type="text" id="inputMsg" placeholder="Escribe tu mensaje..." onkeypress="if(event.key==='Enter') enviarMensaje()">
                     <button onclick="enviarMensaje()">Enviar</button>
                 </div>
             </div>
@@ -308,9 +322,9 @@ def ver_categoria(nombre_cat):
                 precioActual = precio;
                 especialistaActual = listaEspecialistas[index % listaEspecialistas.length];
                 
-                document.getElementById('tituloProducto').innerText = especialistaActual + ' (Asesor IA)';
+                document.getElementById('tituloProducto').innerText = especialistaActual + ' (Especialista)';
                 const msgs = document.getElementById('chatMsgs');
-                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Soy <strong>${especialistaActual}</strong>, especialista en <strong>${nombre}</strong>.<br>El precio base es de <strong>S/ ${precio.toFixed(2)} / kg</strong>.<br>¿En qué puedo ayudarte hoy? Puedes pedirme cotización por kilos, consultar sobre envíos, garantía o calidad.</div>`;
+                msgs.innerHTML = `<div class="msg msg-bot">¡Hola! Soy <strong>${especialistaActual}</strong>, productor de <strong>${nombre}</strong>. ¿En qué te puedo ayudar hoy?</div>`;
                 document.getElementById('modalChat').style.display = 'flex';
             }
 
@@ -350,7 +364,7 @@ def ver_categoria(nombre_cat):
     """
     return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
-# Motor de IA contextualizado con variaciones dinámicas
+# Motor de respuesta conversacional natural y humana
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     datos = request.json
@@ -361,77 +375,64 @@ def api_chat():
 
     numeros = re.findall(r'\d+', mensaje)
 
-    # 1. Cotización si ingresa kilos o un número
-    if numeros:
+    # 1. Charlas informales o saludos humanos (Ej: "¿Cómo estás?", "Hola", "Quién eres")
+    if any(k in mensaje for k in ["como estas", "cómo estás", "como andas", "que tal", "qué tal", "como te va"]):
+        respuestas_estado = [
+            f"¡Hola! Todo excelente por aquí, trabajando en el campo con los cultivos de {producto}. ¿Y tú, qué tal?",
+            f"¡Muy bien, gracias por preguntar! Un día tranquilo en la parcela. ¿En qué te puedo ayudar hoy?",
+            f"¡Todo bien por acá! Aquí organizando las semillas de {producto}. ¿Tú qué tal estás?"
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_estado)})
+
+    elif any(k in mensaje for k in ["quien eres", "quién eres", "como te llamas", "cómo te llamas", "eres una ia", "eres un bot"]):
+        return jsonify({"respuesta": f"Soy {especialista}, un especialista agrícola colaborador en Semillas Conectadas. Me encargo del asesoramiento técnico y producción de {producto}."})
+
+    elif any(k in mensaje for k in ["hola", "buenas", "buenos dias", "buenas tardes", "buenas noches"]):
+        respuestas_saludo = [
+            f"¡Hola! Gusto en saludarte. ¿Cómo te va?",
+            f"¡Buenas! Un saludo. ¿Qué tal tu día?",
+            f"¡Hola! Por aquí con gusto de conversar. ¿En qué te puedo ayudar?"
+        ]
+        return jsonify({"respuesta": random.choice(respuestas_saludo)})
+
+    # 2. Si el usuario ingresa números / kilos (pide cotización explícita)
+    elif numeros:
         kilos = int(numeros[0])
         subtotal = kilos * precio
         envio = 0.0 if kilos >= 20 else 15.0
         total = subtotal + envio
         
         respuestas_cotizacion = [
-            f"Perfecto. Para un pedido de <strong>{kilos} kg</strong> de {producto}:<br>"
+            f"Claro, para <strong>{kilos} kg</strong> de {producto}:<br>"
             f"• Subtotal: S/ {subtotal:.2f}<br>"
-            f"• Flete/Envío: S/ {envio:.2f} {'(¡Envío gratis por pedir +20 kg!)' if envio == 0 else ''}<br>"
-            f"• <strong>Monto Final: S/ {total:.2f}</strong><br>"
-            f"¿Te gustaría proceder a coordinar el despacho?",
+            f"• Envío: S/ {envio:.2f} {'(¡Gratis por llevar más de 20kg!)' if envio == 0 else ''}<br>"
+            f"• <strong>Total estimado: S/ {total:.2f}</strong>",
             
-            f"Excelente elección. Elaborando la cotización para <strong>{kilos} kg</strong>:<br>"
-            f"• Precio por kg: S/ {precio:.2f}<br>"
-            f"• Costo total de semillas: S/ {subtotal:.2f}<br>"
-            f"• Cargo de envío: S/ {envio:.2f}<br>"
-            f"• <strong>Total estimado: S/ {total:.2f}</strong><br>"
-            f"Quedo atento a tus indicaciones para reservar este lote.",
-
-            f"Entendido. Un lote de <strong>{kilos} kg</strong> de {producto} suma:<br>"
-            f"• Subtotal: S/ {subtotal:.2f}<br>"
-            f"• Transporte regional: S/ {envio:.2f}<br>"
-            f"• <strong>Total a pagar: S/ {total:.2f}</strong><br>"
-            f"¿A qué provincia o distrito requerirías el envío?"
+            f"Calculando para <strong>{kilos} kg</strong> de {producto}:<br>"
+            f"• Semillas: S/ {subtotal:.2f}<br>"
+            f"• Flete: S/ {envio:.2f}<br>"
+            f"• <strong>Total: S/ {total:.2f}</strong>"
         ]
         return jsonify({"respuesta": random.choice(respuestas_cotizacion)})
 
-    # 2. Consultas sobre envíos o transporte
+    # 3. Preguntas de envío o transporte
     elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "donde"]):
-        respuestas_envio = [
-            f"Realizamos despachos directos desde el campo a cualquier provincia del Perú. El envío demora entre 24 y 48 horas. Cuesta S/ 15.00, pero si pides a partir de 20 kg el flete es <strong>totalmente gratis</strong>.",
-            f"Coordinamos con agencias de transporte a nivel nacional (Shalom, Marvisur, Olva). El tiempo promedio de entrega es de 1 a 2 días hábiles según la región.",
-            f"Hacemos envíos directos a todas las regiones del país. Recuerda que para compras de 20 kg a más el envío no tiene costo adicional."
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_envio)})
+        return jsonify({"respuesta": f"Enviamos a cualquier provincia del Perú en 24-48h por agencias como Shalom o Marvisur. Cuesta S/ 15.00, pero si pides a partir de 20 kg el envío sale gratis."})
 
-    # 3. Saludos
-    elif any(k in mensaje for k in ["hola", "buenas", "que tal", "saludos", "inicio"]):
-        respuestas_saludo = [
-            f"¡Hola! Saludos. Soy {especialista}. ¿En qué te puedo asesorar respecto al cultivo o pedido de {producto}?",
-            f"¡Buenas! Un gusto saludarte. Quedo a tu disposición para brindarte detalles sobre el rendimiento o cotizaciones de {producto}.",
-            f"¡Hola! Qué gusto saludarte. ¿Deseas cotizar alguna cantidad específica o tienes consultas sobre la germinación de este lote?"
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_saludo)})
+    # 4. Preguntas de precio o costo
+    elif any(k in mensaje for k in ["precio", "cuanto cuesta", "cuánto cuesta", "costo", "valor"]):
+        return jsonify({"respuesta": f"El precio base de {producto} es de <strong>S/ {precio:.2f} por kilo</strong>."})
 
-    # 4. Consultas sobre garantía, germinación o calidad
-    elif any(k in mensaje for k in ["calidad", "garantia", "germinacion", "rendimiento", "bueno", "nativa", "original"]):
-        respuestas_calidad = [
-            f"Nuestras semillas de {producto} tienen una tasa de germinación superior al 88%. Son cosechadas de manera artesanal y libre de transgénicos.",
-            f"Garantizamos un origen 100% nativo y libre de intermediarios. Cada lote cuenta con registro de origen y alto rendimiento por hectárea.",
-            f"Todas las variedades pasan por selección manual. Te garantizamos la máxima frescura y pureza genética en este lote."
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_calidad)})
+    # 5. Preguntas de calidad o si es nativo
+    elif any(k in mensaje for k in ["calidad", "garantia", "germinacion", "rendimiento", "bueno", "nativa"]):
+        return jsonify({"respuesta": f"Son semillas 100% nativas y orgánicas. Tienen un porcentaje de germinación del 85% al 90%."})
 
-    # 5. Métodos de pago o descuentos
-    elif any(k in mensaje for k in ["pago", "descuento", "precio", "yape", "tarjeta", "efectivo"]):
-        respuestas_pago = [
-            f"Aceptamos transferencias bancarias, Yape, Plin y pagos contra entrega coordinados con la agencia. Para compras mayores a 50 kg ofrecemos un 5% de descuento adicional.",
-            f"El precio base es de S/ {precio:.2f} por kg. Puedes pagar directamente vía Yape/Plin o transferencia. Si compras por volumen podemos aplicar una tarifa mayorista.",
-            f"Manejamos precios de comercio justo directo. Puedes cancelar por medio de transferencia electrónica o billeteras digitales."
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_pago)})
-
-    # 6. Respuesta general / fallback aleatorio si no reconoce
+    # 6. Respuesta humana general si no es nada de lo anterior
     else:
         respuestas_general = [
-            f"Entiendo tu consulta sobre <strong>{producto}</strong>. Para darte el presupuesto exacto con transporte, ¿cuántos kilos calculas que vas a necesitar?",
-            f"Gracias por escribir. Si tienes dudas sobre el rendimiento de {producto} o deseas calcular el total de tu pedido, indícame la cantidad en kilos.",
-            f"Con gusto te brindo asistencia. ¿Deseas conocer la disponibilidad de stock o cotizar un lote de {producto}?"
+            f"Entiendo. Si tienes cualquier duda sobre el cultivo de {producto} o sobre cómo trabajamos, dime con confianza.",
+            f"Claro que sí. Avísame si deseas saber más detalles sobre esta variedad.",
+            f"Comprendo. Quedo atento si necesitas información específica de {producto}."
         ]
         return jsonify({"respuesta": random.choice(respuestas_general)})
 
