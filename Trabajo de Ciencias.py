@@ -360,7 +360,7 @@ def ver_categoria(nombre_cat):
     """
     return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
-# Motor de respuestas estricto por prioridades léxicas
+# Motor con reglas ultra-claras
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     datos = request.json
@@ -371,18 +371,22 @@ def api_chat():
 
     numeros = re.findall(r'\d+', mensaje)
 
-    # 1. PRIORIDAD MÁXIMA: PRECIO / VALOR / PRECIO POR KILO (Resuelve "pero cuanto vale por kilo")
-    if any(k in mensaje for k in ["vale", "cuesta", "precio", "cuanto", "cuánto", "costo", "soles", "oferta", "tarifa"]):
+    # 1. PREGUNTA SOBRE PESO / PESAN / KILO INDIVIDUAL (Resuelve "cuanto pesa" o "cuanto pesa cada uno")
+    if any(k in mensaje for k in ["pesa", "peso", "pesan", "gramos", "cada uno", "unidad"]):
+        return jsonify({"respuesta": f"Cada unidad o tubérculo/semilla de **{producto}** tiene un peso promedio individual de **150g a 300g** según el lote. Para la venta comercial, despachamos en paquetes por kilo (S/ {precio:.2f} el kg) o en sacos mayores."})
+
+    # 2. PREGUNTAS SOBRE PRECIO Y COSTOS (Ej: "cuanto vale", "cuanto cuesta", "precio")
+    elif any(k in mensaje for k in ["vale", "cuesta", "precio", "costo", "soles", "cuanto sale"]):
         if numeros:
             kilos = int(numeros[0])
             subtotal = kilos * precio
             envio = 0.0 if kilos >= 20 else 15.0
             total = subtotal + envio
-            return jsonify({"respuesta": f"El kilo de **{producto}** cuesta **S/ {precio:.2f}**.<br>Para **{kilos} kg** sería:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f}<br>• **Total: S/ {total:.2f}**"})
+            return jsonify({"respuesta": f"El kilo de **{producto}** está **S/ {precio:.2f}**.<br>Para **{kilos} kg**:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f}<br>• **Total: S/ {total:.2f}**"})
         else:
-            return jsonify({"respuesta": f"El precio de **{producto}** es de **S/ {precio:.2f} por kilo**[cite: 5]. ¿Cuántos kilos te gustaría cotizar o calcular con flete de envío?"})
+            return jsonify({"respuesta": f"El precio de **{producto}** es de **S/ {precio:.2f} por kilo**. ¿Cuántos kilos deseas cotizar?"})
 
-    # 2. COTIZACIÓN POR NÚMERO DIRECTO (Ej: "10" o "15 kg")
+    # 3. COTIZACIÓN POR NÚMERO DIRECTO (Ej: "10" o "15 kg")
     elif numeros:
         kilos = int(numeros[0])
         subtotal = kilos * precio
@@ -390,35 +394,31 @@ def api_chat():
         total = subtotal + envio
         return jsonify({"respuesta": f"Para un pedido de **{kilos} kg** de **{producto}**:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f} {'(¡Envío gratis!)' if envio == 0 else ''}<br>• **Total estimado: S/ {total:.2f}**"})
 
-    # 3. PRESENTACIONES / PRESENTACIÓN DE EMPAQUE (Solo si no preguntó por costo)
+    # 4. PRESENTACIONES / PRESENTACIÓN DE EMPAQUE
     elif any(k in mensaje for k in ["presentacion", "presentaciones", "saco", "sacos", "bolsa", "embalaje"]):
-        return jsonify({"respuesta": f"Vendemos **{producto}** en sacos o bolsas selladas de **1 kg, 5 kg, 10 kg y 50 kg** según tus necesidades."})
+        return jsonify({"respuesta": f"Vendemos **{producto}** en sacos o bolsas selladas de **1 kg, 5 kg, 10 kg y 50 kg**."})
 
-    # 4. TAMAÑO / FORMA / ASPECTO
-    elif any(k in mensaje for k in ["tamaño", "tamano", "grande", "mediano", "pequeño", "pequeños", "grandes", "medianos", "forma", "aspecto"]):
-        return jsonify({"respuesta": f"Los ejemplares de **{producto}** son de tamaño **mediano a grande**. Vienen limpios, seleccionados a mano y sin defectos de plaga."})
+    # 5. TAMAÑO / FORMA / ASPECTO
+    elif any(k in mensaje for k in ["tamaño", "tamano", "grande", "mediano", "pequeño", "pequeños", "grandes", "medianos"]):
+        return jsonify({"respuesta": f"Los ejemplares de **{producto}** son de tamaño **mediano a grande**, seleccionados limpios a mano."})
 
-    # 5. SALUDOS / ESTADO ÁNIMO
-    elif any(k in mensaje for k in ["como estas", "cómo estás", "como andas", "que tal", "qué tal"]):
-        return jsonify({"respuesta": f"¡Hola! Todo muy bien por aquí en el campo con los lotes de {producto}. ¿En qué te puedo ayudar hoy?"})
+    # 6. SALUDOS / ESTADO ÁNIMO
+    elif any(k in mensaje for k in ["como estas", "cómo estás", "que tal", "qué tal"]):
+        return jsonify({"respuesta": f"¡Hola! Todo excelente por aquí con los lotes de {producto}. ¿En qué te ayudo?"})
 
     elif any(k in mensaje for k in ["quien eres", "quién eres", "eres una ia", "quien habla"]):
-        return jsonify({"respuesta": f"Soy {especialista}, agricultor especializado de la red. Atiendo tus dudas técnicas y pedidos sobre {producto}."})
+        return jsonify({"respuesta": f"Soy {especialista}, agricultor de la red para el lote de {producto}."})
 
-    elif any(k in mensaje for k in ["hola", "buenas", "saludos", "buenos dias", "buenas tardes"]):
-        return jsonify({"respuesta": f"¡Hola! Un gusto saludarte. Cuéntame, ¿qué consulta tienes sobre {producto}?"})
-
-    # 6. SIEMBRA Y CULTIVO TÉCNICO
-    elif any(k in mensaje for k in ["siembra", "sembrar", "cosecha", "tiempo", "meses", "clima", "tierra", "suelo"]):
-        return jsonify({"respuesta": f"Para cultivar **{producto}** se requiere clima templado/frío y suelo fértil. El tiempo de cosecha oscila entre **4 a 6 meses**."})
+    elif any(k in mensaje for k in ["hola", "buenas", "saludos"]):
+        return jsonify({"respuesta": f"¡Hola! Un gusto saludarte. Dime qué duda tienes sobre {producto}."})
 
     # 7. ENVÍOS Y TRANSPORTES
     elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "agencia"]):
-        return jsonify({"respuesta": f"Despachamos a todo el Perú mediante agencias como Shalom o Marvisur. El flete es de S/ 15.00 o **GRATIS** a partir de 20 kg."})
+        return jsonify({"respuesta": f"Despachamos a todo el Perú por Shalom o Marvisur. El flete es de S/ 15.00 o **GRATIS** desde 20 kg."})
 
-    # 8. RESPUESTA COHERENTE Y ABIERTA SI ES OTRA CONSULTA
+    # 8. DEFAULT NATURAL
     else:
-        return jsonify({"respuesta": f"Con respecto a tu consulta sobre **{producto}**: el lote está disponible a **S/ {precio:.2f} por kilo**. ¿Te gustaría calcular el total para una cantidad específica de kilos o saber sobre los envíos?"})
+        return jsonify({"respuesta": f"Respecto a tu consulta sobre **{producto}**: el lote está disponible a **S/ {precio:.2f} por kilo**. ¿Quieres cotizar kilos o preguntar por el envío?"})
 
 if __name__ == "__main__":
     app.run(debug=True)
