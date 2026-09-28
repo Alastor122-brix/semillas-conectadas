@@ -93,13 +93,10 @@ def inicio():
         <title>Semillas Conectadas - Comercio Justo Directo</title>
         <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; }
-            
-            /* Encabezado Principal */
             header { background: #2e7d32; color: white; padding: 25px 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
             h1 { margin: 0; font-size: 2.2em; }
             p.subtitulo { margin-top: 5px; font-size: 1.1em; opacity: 0.9; }
             
-            /* Cuadro de Fuentes Bibliográficas al lado/debajo del Título */
             .header-fuentes {
                 background: rgba(255, 255, 255, 0.15);
                 border: 1px solid rgba(255, 255, 255, 0.3);
@@ -144,7 +141,6 @@ def inicio():
             <h1>Plataforma Semillas Conectadas 🌱</h1>
             <p class="subtitulo">Conectando Pequeños Agricultores Directamente con el Mercado</p>
             
-            <!-- Fuentes Bibliográficas visibles directo en el Título -->
             <div class="header-fuentes">
                 <h4>📚 Fuentes Bibliográficas y Científicas del Proyecto:</h4>
                 <ul>
@@ -364,7 +360,7 @@ def ver_categoria(nombre_cat):
     """
     return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
-# Motor de respuesta conversacional natural y humana
+# Motor de respuestas contextuales mejorado
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     datos = request.json
@@ -375,66 +371,43 @@ def api_chat():
 
     numeros = re.findall(r'\d+', mensaje)
 
-    # 1. Charlas informales o saludos humanos (Ej: "¿Cómo estás?", "Hola", "Quién eres")
-    if any(k in mensaje for k in ["como estas", "cómo estás", "como andas", "que tal", "qué tal", "como te va"]):
-        respuestas_estado = [
-            f"¡Hola! Todo excelente por aquí, trabajando en el campo con los cultivos de {producto}. ¿Y tú, qué tal?",
-            f"¡Muy bien, gracias por preguntar! Un día tranquilo en la parcela. ¿En qué te puedo ayudar hoy?",
-            f"¡Todo bien por acá! Aquí organizando las semillas de {producto}. ¿Tú qué tal estás?"
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_estado)})
+    # 1. Preguntas sobre TAMAÑO / FORMA / ASPECTO (Ej: "grandes pequeños o medianos")
+    if any(k in mensaje for k in ["tamaño", "tamano", "grande", "mediano", "pequeño", "pequeños", "grandes", "medianos", "forma", "aspecto", "color"]):
+        return jsonify({"respuesta": f"Las semillas y tubérculos de <strong>{producto}</strong> son de tamaño **mediano a grande**[cite: 3]. Seleccionamos solo ejemplares bien desarrollados, limpios y con excelente apariencia visual para garantizar una siembra de calidad."})
 
-    elif any(k in mensaje for k in ["quien eres", "quién eres", "como te llamas", "cómo te llamas", "eres una ia", "eres un bot"]):
-        return jsonify({"respuesta": f"Soy {especialista}, un especialista agrícola colaborador en Semillas Conectadas. Me encargo del asesoramiento técnico y producción de {producto}."})
-
-    elif any(k in mensaje for k in ["hola", "buenas", "buenos dias", "buenas tardes", "buenas noches"]):
-        respuestas_saludo = [
-            f"¡Hola! Gusto en saludarte. ¿Cómo te va?",
-            f"¡Buenas! Un saludo. ¿Qué tal tu día?",
-            f"¡Hola! Por aquí con gusto de conversar. ¿En qué te puedo ayudar?"
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_saludo)})
-
-    # 2. Si el usuario ingresa números / kilos (pide cotización explícita)
+    # 2. Cotización explícita con números (Kilos)
     elif numeros:
         kilos = int(numeros[0])
         subtotal = kilos * precio
         envio = 0.0 if kilos >= 20 else 15.0
         total = subtotal + envio
-        
-        respuestas_cotizacion = [
-            f"Claro, para <strong>{kilos} kg</strong> de {producto}:<br>"
-            f"• Subtotal: S/ {subtotal:.2f}<br>"
-            f"• Envío: S/ {envio:.2f} {'(¡Gratis por llevar más de 20kg!)' if envio == 0 else ''}<br>"
-            f"• <strong>Total estimado: S/ {total:.2f}</strong>",
-            
-            f"Calculando para <strong>{kilos} kg</strong> de {producto}:<br>"
-            f"• Semillas: S/ {subtotal:.2f}<br>"
-            f"• Flete: S/ {envio:.2f}<br>"
-            f"• <strong>Total: S/ {total:.2f}</strong>"
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_cotizacion)})
+        return jsonify({"respuesta": f"Para <strong>{kilos} kg</strong> de {producto}:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f} {'(¡Gratis por llevar 20kg o más!)' if envio == 0 else ''}<br>• <strong>Total estimado: S/ {total:.2f}</strong>"})
 
-    # 3. Preguntas de envío o transporte
-    elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "donde"]):
-        return jsonify({"respuesta": f"Enviamos a cualquier provincia del Perú en 24-48h por agencias como Shalom o Marvisur. Cuesta S/ 15.00, pero si pides a partir de 20 kg el envío sale gratis."})
+    # 3. Charlas y Saludos Humanos
+    elif any(k in mensaje for k in ["como estas", "cómo estás", "como andas", "que tal", "qué tal"]):
+        return jsonify({"respuesta": f"¡Hola! Todo excelente por aquí en el campo con la cosecha de {producto}. ¿En qué te puedo asesorar hoy?"})
 
-    # 4. Preguntas de precio o costo
-    elif any(k in mensaje for k in ["precio", "cuanto cuesta", "cuánto cuesta", "costo", "valor"]):
-        return jsonify({"respuesta": f"El precio base de {producto} es de <strong>S/ {precio:.2f} por kilo</strong>."})
+    elif any(k in mensaje for k in ["quien eres", "quién eres", "eres una ia", "eres un bot", "quien habla"]):
+        return jsonify({"respuesta": f"Soy {especialista}, agricultor especializado de la red. Atiendo consultas técnicas y pedidos de {producto}."})
 
-    # 5. Preguntas de calidad o si es nativo
-    elif any(k in mensaje for k in ["calidad", "garantia", "germinacion", "rendimiento", "bueno", "nativa"]):
-        return jsonify({"respuesta": f"Son semillas 100% nativas y orgánicas. Tienen un porcentaje de germinación del 85% al 90%."})
+    elif any(k in mensaje for k in ["hola", "buenas", "saludos", "buenos dias", "buenas tardes"]):
+        return jsonify({"respuesta": f"¡Hola! Un gusto saludarte. Dime qué dudas tienes sobre {producto}."})
 
-    # 6. Respuesta humana general si no es nada de lo anterior
+    # 4. Preguntas técnicas de cultivo (Tiempo de cosecha, siembra, clima, agua)
+    elif any(k in mensaje for k in ["siembra", "sembrar", "cosecha", "tiempo", "meses", "clima", "tierra", "suelo", "agua", "riego"]):
+        return jsonify({"respuesta": f"Para el cultivo de <strong>{producto}</strong> se recomienda un clima templado o frío andino con suelos bien drenados. El tiempo promedio de cosecha oscila entre los 4 y 6 meses dependiendo de la altura de la zona."})
+
+    # 5. Envíos y transporte
+    elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "donde", "agencia"]):
+        return jsonify({"respuesta": f"Hacemos despachos directos a todas las provincias del Perú mediante agencias (Shalom, Marvisur, Olva). El flete cuesta S/ 15.00 o es **GRATIS** en compras de 20 kg a más."})
+
+    # 6. Precios y pagos
+    elif any(k in mensaje for k in ["precio", "cuanto cuesta", "costo", "pago", "yape", "tarjeta"]):
+        return jsonify({"respuesta": f"El precio de <strong>{producto}</strong> es de **S/ {precio:.2f} por kilo**. Aceptamos Yape, Plin, transferencias y pagos coordinados con la agencia de transporte."})
+
+    # 7. Respuesta genérica fluida
     else:
-        respuestas_general = [
-            f"Entiendo. Si tienes cualquier duda sobre el cultivo de {producto} o sobre cómo trabajamos, dime con confianza.",
-            f"Claro que sí. Avísame si deseas saber más detalles sobre esta variedad.",
-            f"Comprendo. Quedo atento si necesitas información específica de {producto}."
-        ]
-        return jsonify({"respuesta": random.choice(respuestas_general)})
+        return jsonify({"respuesta": f"Respecto a tu consulta sobre <strong>{producto}</strong>: este lote cuenta con certificación de origen nativo y selección manual. ¿Te gustaría saber sobre la siembra, el tamaño o cotizar por kilos?"})
 
 if __name__ == "__main__":
     app.run(debug=True)
