@@ -360,7 +360,7 @@ def ver_categoria(nombre_cat):
     """
     return render_template_string(plantilla_html, categoria=nombre_cat, productos=categoria_productos, emoji=emoji_cat, especialistas=especialistas_cat)
 
-# Motor con orden de prioridad conversacional
+# Motor de respuestas optimizado con los casos de la lista
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     datos = request.json
@@ -371,7 +371,7 @@ def api_chat():
 
     numeros = re.findall(r'\d+', mensaje)
 
-    # 1. AGRADECIMIENTOS Y DESPEDIDAS (Soluciona la respuesta rara ante "ok gracias")
+    # 1. AGRADECIMIENTOS Y DESPEDIDAS
     if any(k in mensaje for k in ["gracias", "grasia", "ok", "vale", "listo", "perfecto", "genial", "excelente", "chao", "hasta luego"]):
         respuestas_gracias = [
             f"¡De nada! Ha sido un gusto atenderte. Si tienes más dudas sobre **{producto}**, aquí estaré.",
@@ -380,22 +380,40 @@ def api_chat():
         ]
         return jsonify({"respuesta": random.choice(respuestas_gracias)})
 
-    # 2. PREGUNTA SOBRE PESO INDIVIDUAL O GRAMAJE
-    elif any(k in mensaje for k in ["pesa", "peso", "pesan", "gramos", "cada uno", "unidad"]):
-        return jsonify({"respuesta": f"Cada unidad o tubérculo de **{producto}** pesa entre **150g y 300g**. Para comercialización, despachamos en paquetes por kilo (S/ {precio:.2f} el kg) o en sacos."})
+    # 2. METODOS DE PAGO / DONDE Y COMO PAGAR / YAPE / PLIN / PAYPAL / TARJETA (NUEVO)
+    elif any(k in mensaje for k in ["donde pagar", "como pagar", "yape", "plin", "paypal", "metodo de pago", "medios de pago", "modo de pago"]):
+        return jsonify({"respuesta": f"Aceptamos transferencias mediante **Yape, Plin, PayPal, tarjetas de débito/crédito** y depósito bancario. Una vez coordinado el volumen de **{producto}**, te enviamos el código QR o número de cuenta."})
 
-    # 3. PREGUNTAS SOBRE PRECIOS Y COSTOS
-    elif any(k in mensaje for k in ["vale", "cuesta", "precio", "costo", "soles", "cuanto sale"]):
-        if numeros:
+    # 3. TIEMPO DE DEMORA / TIEMPO DE ENVÍO (NUEVO)
+    elif any(k in mensaje for k in ["demorara", "demora", "cuanto tarda", "tiempo de envio", "cuanto demora"]):
+        return jsonify({"respuesta": f"El despacho de **{producto}** demora entre **24 a 48 horas** a cualquier provincia del Perú. Te enviamos el número de seguimiento de la agencia."})
+
+    # 4. PRECIOS Y ERRORES DE TIPEO ("cuanto xuesta", "cuanto esta", "cuanto vale") (NUEVO)
+    elif any(k in mensaje for k in ["xuesta", "esta", "vale", "cuesta", "precio", "costo", "soles", "cuanto sale", "cuanto e"]):
+        if "envio" in mensaje or "flete" in mensaje:
+            return jsonify({"respuesta": f"El flete de envío para **{producto}** cuesta **S/ 15.00** a todo el Perú, pero si pides **20 kg o más, el envío sale completamente GRATIS**."})
+        elif numeros:
             kilos = int(numeros[0])
             subtotal = kilos * precio
             envio = 0.0 if kilos >= 20 else 15.0
             total = subtotal + envio
             return jsonify({"respuesta": f"El kilo de **{producto}** está **S/ {precio:.2f}**.<br>Para **{kilos} kg**:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f}<br>• **Total: S/ {total:.2f}**"})
         else:
-            return jsonify({"respuesta": f"El precio de **{producto}** es de **S/ {precio:.2f} por kilo**. ¿Cuántos kilos deseas cotizar?"})
+            return jsonify({"respuesta": f"El precio de **{producto}** es de **S/ {precio:.2f} por kilo**. ¿Cuántos kilos te gustaría cotizar?"})
 
-    # 4. COTIZACIÓN POR NÚMERO DIRECTO (Ej: "10" o "15 kg")
+    # 5. LUGAR DE COSECHA / ALTURA DE CULTIVO (NUEVO)
+    elif any(k in mensaje for k in ["donde la cosechan", "donde cosechan", "altura", "altitud", "msnm", "donde siembran"]):
+        return jsonify({"respuesta": f"La variedad **{producto}** se cosecha directamente en campos de alta montaña (entre los **2,800 y 3,800 m.s.n.m.**) en los valles interandinos del Perú, lo que le da su alta calidad y resistencia."})
+
+    # 6. TIPO Y CLASE DE SEMILLA (NUEVO)
+    elif any(k in mensaje for k in ["clase de semilla", "tipo de semilla", "que semilla es", "que clase"]):
+        return jsonify({"respuesta": f"**{producto}** es una semilla de variedad **Nativa Orgánica y Criolla Tradicional**, seleccionada manualmente, libre de transgénicos y con alto porcentaje de germinación."})
+
+    # 7. PREGUNTA SOBRE PESO INDIVIDUAL O GRAMAJE
+    elif any(k in mensaje for k in ["pesa", "peso", "pesan", "gramos", "cada uno", "unidad"]):
+        return jsonify({"respuesta": f"Cada unidad o tubérculo de **{producto}** pesa entre **150g y 300g**. Para comercialización, despachamos en paquetes por kilo (S/ {precio:.2f} el kg) o en sacos."})
+
+    # 8. COTIZACIÓN POR NÚMERO DIRECTO (Ej: "10" o "15 kg")
     elif numeros:
         kilos = int(numeros[0])
         subtotal = kilos * precio
@@ -403,15 +421,15 @@ def api_chat():
         total = subtotal + envio
         return jsonify({"respuesta": f"Para un pedido de **{kilos} kg** de **{producto}**:<br>• Subtotal: S/ {subtotal:.2f}<br>• Envío: S/ {envio:.2f} {'(¡Envío gratis!)' if envio == 0 else ''}<br>• **Total estimado: S/ {total:.2f}**"})
 
-    # 5. PRESENTACIONES DE EMPAQUE
+    # 9. PRESENTACIONES DE EMPAQUE
     elif any(k in mensaje for k in ["presentacion", "presentaciones", "saco", "sacos", "bolsa", "embalaje"]):
         return jsonify({"respuesta": f"Vendemos **{producto}** en sacos o bolsas selladas de **1 kg, 5 kg, 10 kg y 50 kg**."})
 
-    # 6. TAMAÑO / FORMA / ASPECTO
+    # 10. TAMAÑO / FORMA / ASPECTO
     elif any(k in mensaje for k in ["tamaño", "tamano", "grande", "mediano", "pequeño", "pequeños", "grandes", "medianos"]):
         return jsonify({"respuesta": f"Los ejemplares de **{producto}** son de tamaño **mediano a grande**, seleccionados limpios a mano."})
 
-    # 7. SALUDOS E INFORMAL
+    # 11. SALUDOS E INFORMAL
     elif any(k in mensaje for k in ["como estas", "cómo estás", "que tal", "qué tal"]):
         return jsonify({"respuesta": f"¡Hola! Todo excelente por aquí en el campo con los lotes de {producto}. ¿En qué te ayudo?"})
 
@@ -421,13 +439,13 @@ def api_chat():
     elif any(k in mensaje for k in ["hola", "buenas", "saludos"]):
         return jsonify({"respuesta": f"¡Hola! Un gusto saludarte. Dime qué duda tienes sobre {producto}."})
 
-    # 8. ENVÍOS Y TRANSPORTES
+    # 12. ENVÍOS Y TRANSPORTES
     elif any(k in mensaje for k in ["envio", "flete", "llegar", "transporte", "provincia", "agencia"]):
         return jsonify({"respuesta": f"Despachamos a todo el Perú por Shalom o Marvisur. El flete es de S/ 15.00 o **GRATIS** desde 20 kg."})
 
-    # 9. RESPUESTA ABIERTA
+    # 13. RESPUESTA ABIERTA PREDETERMINADA
     else:
-        return jsonify({"respuesta": f"Con respecto a tu consulta sobre **{producto}**: el lote está disponible a **S/ {precio:.2f} por kilo**. ¿Quieres cotizar kilos o preguntar por el envío?"})
+        return jsonify({"respuesta": f"Respecto a tu consulta sobre **{producto}**: el lote está disponible a **S/ {precio:.2f} por kilo**. ¿Quieres cotizar kilos o preguntar por el envío?"})
 
 if __name__ == "__main__":
     app.run(debug=True)
